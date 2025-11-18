@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- List view -->
+    <record id="crm_lead_spreadsheet_view_list" model="ir.ui.view">
+        <field name="name">crm.lead.spreadsheet.list</field>
+        <field name="model">crm.lead.spreadsheet</field>
+        <field name="arch" type="xml">
+            <list editable="bottom">
+                <field name="name"/>
+                <field name="lead_id"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+                <field name="spreadsheet_binary_data" widget="binary_spreadsheet" filename="spreadsheet_file_name"/>
+                <field name="spreadsheet_file_name" column_invisible="1"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Search view -->
+    <record id="crm_lead_spreadsheet_view_search" model="ir.ui.view">
+        <field name="name">crm.lead.spreadsheet.search</field>
+        <field name="model">crm.lead.spreadsheet</field>
+        <field name="arch" type="xml">
+            <search>
+                <filter name="templates" string="Template Sheets" domain="[('lead_id', '=', False)]"/>
+                <filter name="quote_sheets" string="Opportunity Sheets" domain="[('lead_id', '!=', False)]"/>
+            </search>
+        </field>
+    </record>
+
+    <!-- Window Action -->
+    <record id="action_crm_lead_spreadsheet_list" model="ir.actions.act_window">
+        <field name="name">CRM Lead Spreadsheets</field>
+        <field name="res_model">crm.lead.spreadsheet</field>
+        <field name="view_mode">list</field>
+        <field name="context">{'search_default_templates': 1}</field>
+    </record>
+
+    <!-- Menu (Optional, for access in Technical > Spreadsheets) -->
+    <menuitem id="menu_technical_crm_lead_spreadsheet"
+        name="CRM Lead Spreadsheets"
+        parent="spreadsheet_edition.menu_technical_spreadsheet"
+        sequence="20"
+        action="action_crm_lead_spreadsheet_list"/>
+
+    <!-- =============================== sale order spreadsheet view ================================== -->
+         <!-- List view -->
+    <record id="sale_order_spreadsheet_view_list" model="ir.ui.view">
+        <field name="name">sale.order.spreadsheet.list</field>
+        <field name="model">sale.order.spreadsheet</field>
+        <field name="arch" type="xml">
+            <list editable="bottom">
+                <field name="name"/>
+                <field name="order_id"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+                <field name="spreadsheet_binary_data" widget="binary_spreadsheet" filename="spreadsheet_file_name"/>
+                <field name="spreadsheet_file_name" column_invisible="1"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Search view -->
+    <record id="sale_order_spreadsheet_view_search" model="ir.ui.view">
+        <field name="name">sale.order.spreadsheet.search</field>
+        <field name="model">sale.order.spreadsheet</field>
+        <field name="arch" type="xml">
+            <search>
+                <filter name="templates" string="Template Sheets" domain="[('order_id', '=', False)]"/>
+                <filter name="quote_sheets" string="Sales Quote Sheets" domain="[('order_id', '!=', False)]"/>
+            </search>
+        </field>
+    </record>
+
+    <!-- Form view (for spreadsheet widget) -->
+    <record id="sale_order_spreadsheet_view_form" model="ir.ui.view">
+        <field name="name">sale.order.spreadsheet.form</field>
+        <field name="model">sale.order.spreadsheet</field>
+        <field name="arch" type="xml">
+            <form string="Sales Quote Calculator">
+                <sheet>
+                    <div class="oe_button_box" name="button_box"/>
+                    <group>
+                        <field name="name" readonly="1"/>
+                        <field name="order_id" readonly="1"/>
+                        <field name="company_id" readonly="1" groups="base.group_multi_company"/>
+                    </group>
+                    <separator string="Spreadsheet" colspan="2"/>
+                    <widget name="spreadsheet_widget"/>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Window Action -->
+    <record id="action_sale_order_spreadsheet_list" model="ir.actions.act_window">
+        <field name="name">Sales Order Spreadsheets</field>
+        <field name="res_model">sale.order.spreadsheet</field>
+        <field name="view_mode">list,form</field>
+        <field name="context">{'search_default_quote_sheets': 1}</field>
+    </record>
+
+    <!-- Client Action for JS integration -->
+    <record id="action_sale_order_spreadsheet_client" model="ir.actions.client">
+        <field name="name">Sale Quote Calculator</field>
+        <field name="tag">action_sale_order_spreadsheet</field>
+    </record>
+
+    <!-- Optional Menu (for testing / debug access) -->
+    <menuitem id="menu_technical_sale_order_spreadsheet"
+        name="Sales Order Spreadsheets"
+        parent="spreadsheet_edition.menu_technical_spreadsheet"
+        sequence="30"
+        action="action_sale_order_spreadsheet_list"/>
+</odoo>

@@ -1,0 +1,72 @@
+<odoo>
+    <record id="view_crm_quotation_template_form" model="ir.ui.view">
+        <field name="name">crm.quotation.template.form</field>
+        <field name="model">crm.quotation.template</field>
+        <field name="arch" type="xml">
+            <form string="CRM Quotation Template">
+                <sheet>
+                    <div class="oe_title">
+                        <label for="name" class="oe_edit_only"/>
+                        <h1>
+                            <field name="name" placeholder="e.g. Standard Consultancy Package"/>
+                        </h1>
+                    </div>
+
+                    <group>
+                        <group>
+                            <field name="quote_validity"/>
+                            <field name="confirmation_mail"/>
+                            <field name="company_id"/>
+                            <field name="invoicing_journal_id"/>
+                            <field name="quote_calculator_id"/>
+                        </group>
+                        <group>
+                            <field name="online_signature"/>
+                            <field name="online_payment"/>
+                            <field name="payment_percentage"/>
+                        </group>
+                    </group>
+
+                    <!-- <notebook>
+                        <page string="Lines">
+                            <field name="line_ids">
+                                <list editable="bottom">
+                                    <field name="product_template_id"/>
+                                    <field name="quantity"/>
+                                    <field name="width"/>
+                                    <field name="thickness"/>
+                                    <field name="height"/>
+                                    <field name="length"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook> -->
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_crm_quotation_template_list" model="ir.ui.view">
+        <field name="name">crm.quotation.template.list</field>
+        <field name="model">crm.quotation.template</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="name"/>
+                <field name="company_id"/>
+                <field name="active"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="action_crm_quotation_template" model="ir.actions.act_window">
+        <field name="name">CRM Quotation Templates</field>
+        <field name="res_model">crm.quotation.template</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <menuitem id="menu_crm_quotation_template_root"
+              name="CRM Quotation Templates"
+              parent="crm.crm_menu_config"
+              action="action_crm_quotation_template"
+              sequence="25"/>
+</odoo>

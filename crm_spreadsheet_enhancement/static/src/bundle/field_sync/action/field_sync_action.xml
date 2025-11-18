@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<templates id="template" xml:space="preserve">
+    <div t-name="crm_customisation.CrmLeadSpreadsheetAction" class="o_action">
+        <SpreadsheetNavbar t-props="navbarProps">
+            <t t-set-slot="navbar-additional-actions">
+                <!-- 🔥 GENERIC: Works for both CRM and Sales -->
+                <button
+                    t-if="data.lead_id or data.sale_order_id"
+                    class="btn btn-primary mx-1 py-0 px-1"
+                    t-on-click="writeToParent"
+                    data-hotkey="s"
+                    t-esc="saveButtonLabel"
+                />
+            </t>
+        </SpreadsheetNavbar>
+        <SpreadsheetComponent model="model"/>
+    </div>
+</templates>
