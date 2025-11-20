@@ -17,7 +17,6 @@ export class SpreadsheetFieldSyncAction extends AbstractSpreadsheetAction {
     setup() {
         super.setup();
         
-        // ✅ FIX: Get services properly
         this.dialogService = useService("dialog");
         this.notificationService = useService("notification");
         this.orm = useService("orm");
@@ -26,7 +25,7 @@ export class SpreadsheetFieldSyncAction extends AbstractSpreadsheetAction {
         useSubEnv({ makeCopy: this.makeCopy.bind(this) });
         useSpreadsheetFieldSyncExtension();
         
-        // 🔥 NEW: Detect spreadsheet type
+        // Detect spreadsheet type
         this.spreadsheetType = null; // Will be 'crm' or 'sale'
         this.leadId = null;
         this.saleOrderId = null;
@@ -34,7 +33,7 @@ export class SpreadsheetFieldSyncAction extends AbstractSpreadsheetAction {
     }
 
     /**
-     * 🔥 NEW: Get main lists from spreadsheet data
+     * Get main lists from spreadsheet data
      */
     getMainLists() {
         if (!this.spreadsheetData || !this.spreadsheetData.lists) {
@@ -67,7 +66,6 @@ export class SpreadsheetFieldSyncAction extends AbstractSpreadsheetAction {
             const { commands, errors } = await this.model.getters.getFieldSyncX2ManyCommands();
 
             if (errors.length) {
-                // ✅ FIX: Use dialogService
                 this.dialogService.add(WarningDialog, {
                     title: _t("Unable to Save"),
                     message: errors.join("\n\n"),
@@ -75,11 +73,7 @@ export class SpreadsheetFieldSyncAction extends AbstractSpreadsheetAction {
                 return;
             }
 
-            // 🔥 DEBUG: Log which sheet and commands are being processed
-            console.log(`🔄 Saving from Sheet: ${activeSheetId}`);
-            console.log(`📝 Commands to execute:`, commands);
-
-            // 🔥 Process commands based on spreadsheet type
+            // Process commands based on spreadsheet type
             if (this.spreadsheetType === 'crm' && this.leadId) {
                 await this.orm.write("crm.lead", [this.leadId], {
                     material_line_ids: commands,
@@ -90,10 +84,9 @@ export class SpreadsheetFieldSyncAction extends AbstractSpreadsheetAction {
                     order_line: commands,
                 });
             } else {
-                console.warn("❌ Unknown spreadsheet type or missing IDs");
+                throw new Error("No valid parent record found for saving");
             }
-
-            // ✅ FIX: Use notificationService
+       
             this.notificationService.add(_t("Successfully saved changes from current sheet"), {
                 type: "success",
             });
@@ -101,7 +94,6 @@ export class SpreadsheetFieldSyncAction extends AbstractSpreadsheetAction {
             this.env.config.historyBack();
             
         } catch (error) {
-            // ✅ FIX: Use dialogService
             this.dialogService.add(WarningDialog, {
                 title: _t("Save Error"),
                 message: _t("Failed to save changes: %s", error.message),
@@ -109,26 +101,23 @@ export class SpreadsheetFieldSyncAction extends AbstractSpreadsheetAction {
         }
     }
 
-    /**
-     * 🔥 FIXED: Better initialization with backend data
-     */
+    // Better initialization with backend data
     _initializeWith(data) {
         super._initializeWith(data);
         
-        
-        // 🔥 CRM-specific data
+        // CRM-specific data
         if (data.lead_id) {
             this.leadId = data.lead_id;
             this.spreadsheetType = 'crm';
         }
         
-        // 🔥 Sales-specific data
+        // Sales-specific data
         if (data.sale_order_id) {
             this.saleOrderId = data.sale_order_id;
             this.spreadsheetType = 'sale';
         }
         
-        // 🔥 Store display names for UI
+        // Store display names for UI
         if (data.lead_display_name) {
             this.leadDisplayName = data.lead_display_name;
         }
@@ -138,12 +127,12 @@ export class SpreadsheetFieldSyncAction extends AbstractSpreadsheetAction {
         
         this.spreadsheetId = data.sheet_id;
 
-        // 🔥 NEW: Store the raw data for later use
+        // Store the raw data for later use
         this.backendData = data;
     }
     
     /**
-     * 🔥 FIXED: Get appropriate button label based on type
+     * Get appropriate button label based on type
      */
     get saveButtonLabel() {
         if (this.spreadsheetType === 'crm' && this.leadId) {
@@ -157,7 +146,7 @@ export class SpreadsheetFieldSyncAction extends AbstractSpreadsheetAction {
     }
 
     /**
-     * 🔥 NEW: Override to handle both CRM and Sales models
+     * Override to handle both CRM and Sales models
      */
     get resModel() {
         if (this.spreadsheetType === 'crm') {
@@ -169,7 +158,7 @@ export class SpreadsheetFieldSyncAction extends AbstractSpreadsheetAction {
     }
 
     /**
-     * 🔥 NEW: Get current record ID based on type
+     * Get current record ID based on type
      */
     get currentRecordId() {
         if (this.spreadsheetType === 'crm') {
@@ -181,13 +170,12 @@ export class SpreadsheetFieldSyncAction extends AbstractSpreadsheetAction {
     }
 
     /**
-     * 🔥 NEW: Enhanced error handling for spreadsheet loading
+     * Enhanced error handling for spreadsheet loading
      */
     async loadSpreadsheet() {
         try {
             await super.loadSpreadsheet();
         } catch (error) {
-            // ✅ FIX: Use dialogService
             this.dialogService.add(WarningDialog, {
                 title: _t("Load Error"),
                 message: _t("Failed to load spreadsheet: %s", error.message),

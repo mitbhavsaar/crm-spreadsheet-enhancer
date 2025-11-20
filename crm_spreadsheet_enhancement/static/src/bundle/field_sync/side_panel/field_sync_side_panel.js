@@ -28,7 +28,7 @@ export class FieldSyncSidePanel extends Component {
     }
 
     /**
-     * 🔥 GENERIC: Get current list (CRM or Sales)
+     *  Get current list (CRM or Sales)
      */
     getCurrentList() {
         const fieldSync = this.fieldSync;
@@ -41,7 +41,7 @@ export class FieldSyncSidePanel extends Component {
     }
 
     /**
-     * 🔥 GENERIC: Get current model name
+     *  Get current model name
      */
     get currentModelName() {
         const list = this.getCurrentList();
@@ -49,7 +49,7 @@ export class FieldSyncSidePanel extends Component {
     }
 
     /**
-     * 🔥 GENERIC: Get display name for current model
+     *  Get display name for current model
      */
     get modelDisplayName() {
         const models = this.env.model.getters.getSupportedModels();
@@ -77,7 +77,7 @@ export class FieldSyncSidePanel extends Component {
     filterField(field) {
         return (
             !field.readonly &&
-            // 🔥 GENERIC: Exclude parent field based on model
+            //  Exclude parent field based on model
             field.name !== "order_id" &&
             field.name !== "lead_id" &&
             ["integer", "float", "monetary", "char", "text", "many2one", "boolean"].includes(

@@ -38,10 +38,10 @@ class SaleOrderSpreadsheet(models.Model):
         self.ensure_one()
         return {
             'type': 'ir.actions.client',
-            'tag': 'action_sale_order_spreadsheet',  # ✅ NEW TAG
+            'tag': 'action_sale_order_spreadsheet', 
             'params': {
                 'spreadsheet_id': self.id,
-                'model': 'sale.order.spreadsheet',  # ✅ EXPLICIT MODEL
+                'model': 'sale.order.spreadsheet', 
             },
         }
 
@@ -368,7 +368,7 @@ class SaleOrderSpreadsheet(models.Model):
         sheet_data = {
             'id': sheet_id,
             'name': product_name,
-            'cells': {},  # ✅ Add empty cells
+            'cells': {}, 
             'figures': [],
             'areGridLinesVisible': True,
             'rowCount': 1000,

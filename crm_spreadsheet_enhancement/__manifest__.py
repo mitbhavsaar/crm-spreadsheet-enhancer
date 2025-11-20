@@ -11,6 +11,7 @@
         'crm_customisation',
         'spreadsheet',
         'spreadsheet_edition',
+        'documents_spreadsheet',
     ],
     'data': [
         'security/ir.model.access.csv',
@@ -18,6 +19,8 @@
         'views/res_config_settings_view.xml',
         'views/crm_quatation_template_view.xml',
         'views/crm_quote_spreadsheet_view.xml',
+        'views/product_category_view.xml',
+
     ],
     'images': ['/static/description/icon.png'],
     'assets': {

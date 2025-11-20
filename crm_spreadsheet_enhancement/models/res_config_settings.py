@@ -22,7 +22,7 @@ class ResConfigSettings(models.TransientModel):
         if self.enable_crm_quotation_templates and self.crm_quotation_template_id:
             sale_template = self._find_matching_sale_template()
             if sale_template:
-                # 🔥 UPDATE CONFIG PARAMETERS - This will reflect in UI
+                #  UPDATE CONFIG PARAMETERS - This will reflect in UI
                 IrConfig.set_param('sale_management.group_sale_order_template', True)
                 IrConfig.set_param('sale.default_sale_order_template_id', sale_template.id)
                 
@@ -32,7 +32,7 @@ class ResConfigSettings(models.TransientModel):
                 })
                 
         elif not self.enable_crm_quotation_templates:
-            # 🔥 UPDATE CONFIG PARAMETERS
+            #  UPDATE CONFIG PARAMETERS
             IrConfig.set_param('sale_management.group_sale_order_template', False)
             IrConfig.set_param('sale.default_sale_order_template_id', '')
             

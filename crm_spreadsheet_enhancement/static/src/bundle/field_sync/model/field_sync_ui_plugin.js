@@ -37,7 +37,7 @@ export class FieldSyncUIPlugin extends OdooUIPlugin {
     }
 
     /**
-     * 🔥 FIXED: Get record ID from list data properly
+     *  Get record ID from list data properly
      */
     async getRecordIdFromList(listId, indexInList = 0) {
         try {
@@ -147,7 +147,7 @@ export class FieldSyncUIPlugin extends OdooUIPlugin {
     }
 
     /**
-     * 🔥 NEW: Check if field sync belongs to active sheet
+     *  Check if field sync belongs to active sheet
      */
     isFieldSyncFromActiveSheet(fieldSync, position) {
         const activeSheetId = this.getters.getActiveSheetId();
@@ -159,7 +159,7 @@ export class FieldSyncUIPlugin extends OdooUIPlugin {
     
 
     /**
-     * 🔥 FIXED: Correctly process field syncs by record
+     *  Correctly process field syncs by record
      */
     async getFieldSyncX2ManyCommands() {
         const commands = [];
@@ -168,17 +168,17 @@ export class FieldSyncUIPlugin extends OdooUIPlugin {
         try {
             const activeSheetId = this.getters.getActiveSheetId();
             
-            // 🔥 GET ALL LISTS but only process those linked to ACTIVE SHEET
+            //  GET ALL LISTS but only process those linked to ACTIVE SHEET
             const allLists = this.getters.getMainLists();
 
             if (!allLists || allLists.length === 0) {
                 return { commands: [], errors: [] };
             }
 
-            // 🔥 PROCESS ONLY LISTS THAT BELONG TO ACTIVE SHEET
+            //  PROCESS ONLY LISTS THAT BELONG TO ACTIVE SHEET
             for (const list of allLists) {
                 try {
-                    // 🔥 CRITICAL: Only process lists that are linked to active sheet
+                    //   Only process lists that are linked to active sheet
                     if (list.sheetId !== activeSheetId) {
                         continue; // Skip lists from other sheets
                     }
@@ -193,12 +193,12 @@ export class FieldSyncUIPlugin extends OdooUIPlugin {
                     const fields = listDataSource.getFields();
                     const valuesPerRecord = {};
 
-                    // 🔥 GET FIELD SYNCS ONLY FOR THIS LIST (which is already filtered by active sheet)
+                    //  GET FIELD SYNCS ONLY FOR THIS LIST (which is already filtered by active sheet)
                     const allFieldSyncs = this.getters.getAllFieldSyncs();
                     let processedSyncs = 0;
 
                     for (const [position, fieldSync] of allFieldSyncs) {
-                        // 🔥 Only process syncs for THIS list AND active sheet
+                        //  Only process syncs for THIS list AND active sheet
                         if (fieldSync.listId !== list.id || position.sheetId !== activeSheetId) {
                             continue;
                         }
@@ -257,7 +257,7 @@ export class FieldSyncUIPlugin extends OdooUIPlugin {
         return { commands, errors };
     }
     /**
-     * 🔥 NEW: Get all field syncs for a specific list
+     *  Get all field syncs for a specific list
      */
     getFieldSyncsForList(listId) {
         const fieldSyncs = [];
@@ -266,7 +266,7 @@ export class FieldSyncUIPlugin extends OdooUIPlugin {
             // Get all field syncs from the model
             const allFieldSyncs = this.getters.getAllFieldSyncs();
             
-            // 🔥 FIXED: Correct way to iterate - depends on actual structure
+            //  Correct way to iterate - depends on actual structure
             if (allFieldSyncs instanceof Map) {
                 for (const [key, fieldSync] of allFieldSyncs) {
                     if (fieldSync.listId === listId) {
@@ -304,7 +304,7 @@ export class FieldSyncUIPlugin extends OdooUIPlugin {
     }
 
     /**
-     * 🔥 NEW: Parse position from storage key
+     *  Parse position from storage key
      */
     parsePositionFromKey(key) {
         try {
@@ -346,7 +346,7 @@ export class FieldSyncUIPlugin extends OdooUIPlugin {
     }
 
     /**
-     * 🔥 IMPROVED: Check for field conflicts
+     *  IMPROVED: Check for field conflicts
      */
     async checkFieldConflicts() {
         const errors = [];
@@ -459,7 +459,7 @@ export class FieldSyncUIPlugin extends OdooUIPlugin {
             const allFieldSyncs = this.getters.getAllFieldSyncs();
             let fieldSyncEntries = [];
 
-            // 🔥 FIXED: Handle different data structures
+            //  Handle different data structures
             if (allFieldSyncs instanceof Map) {
                 fieldSyncEntries = Array.from(allFieldSyncs.entries());
             } else if (Array.isArray(allFieldSyncs)) {

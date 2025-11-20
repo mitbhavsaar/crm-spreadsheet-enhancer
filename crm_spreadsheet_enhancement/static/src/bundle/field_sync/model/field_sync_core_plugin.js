@@ -3,10 +3,10 @@ import { OdooCorePlugin } from "@spreadsheet/plugins";
 
 const { positionToZone, toCartesian, toXC } = helpers;
 
-// 🔥 MODEL CONFIGURATION - Both CRM and Sales supported
+// MODEL CONFIGURATION - Both CRM and Sales supported
 const SUPPORTED_MODELS = {
     'crm.material.line': {
-        fields: ['product_template_id', 'quantity', 'width', 'height', 'length', 'thickness'],
+        fields: ['product_template_id','attributes_description','quantity', 'width', 'height', 'length', 'thickness'],
         displayName: 'Material Line'
     },
     'sale.order.line': {
@@ -148,9 +148,8 @@ export class FieldSyncCorePlugin extends OdooCorePlugin {
     }
 
     /**
-     * 🔥 GENERIC: Get all lists for supported models
+     * GENERIC: Get all lists for supported models
      */
-
     getMainLists() {
         if (!this.getters || typeof this.getters.getListIds !== "function") {
             return [];
@@ -158,7 +157,6 @@ export class FieldSyncCorePlugin extends OdooCorePlugin {
 
         const listIds = this.getters.getListIds() || [];
         const lists = [];
-
 
         for (const listId of listIds) {
             const list = this.getters.getListDefinition(listId);
@@ -168,7 +166,7 @@ export class FieldSyncCorePlugin extends OdooCorePlugin {
 
             const modelName = list.model || list.modelName;
 
-            // 🔥 CHECK: Is this a supported model?
+            // Is this a supported model?
             if (!this._isSupportedModel(modelName)) {
                 continue;
             }
@@ -203,7 +201,7 @@ export class FieldSyncCorePlugin extends OdooCorePlugin {
     }
 
     /**
-     * 🔥 FIXED: Return array consistently
+     * Return array consistently
      */
     getAllFieldSyncs() {
         const result = [];
@@ -248,7 +246,7 @@ export class FieldSyncCorePlugin extends OdooCorePlugin {
     }
 
     /**
-     * 🔥 FIXED: Export with proper fieldSyncs
+     * Export with proper fieldSyncs
      */
     export(data) {
         const all = this.getAllFieldSyncs();
@@ -277,7 +275,7 @@ export class FieldSyncCorePlugin extends OdooCorePlugin {
     }
 
     /**
-     * 🔥 FIXED: Import with proper handling
+     * Import with proper handling
      */
     import(data) {
         let totalImported = 0;
@@ -294,10 +292,6 @@ export class FieldSyncCorePlugin extends OdooCorePlugin {
                 sheetImported++;
                 totalImported++;
             }
-            
-            if (sheetImported > 0) {
-            }
         }
-        
     }
 }
