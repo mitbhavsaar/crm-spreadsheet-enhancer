@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="group_cost_calculator" model="res.groups">
+        <field name="name">Cost Calculator</field>
+        <field name="category_id" ref="base.module_category_sales_crm"/>
+        <field name="comment">Users with this group can access the Cost Calculator button in CRM leads.</field>
+    </record>
+</odoo>

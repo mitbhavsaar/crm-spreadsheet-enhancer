@@ -28,35 +28,61 @@ export class FieldSyncSidePanel extends Component {
     }
 
     /**
-     *  Get current list (CRM or Sales)
+     * ✅ FIXED: Get current list with proper model detection
      */
     getCurrentList() {
         const fieldSync = this.fieldSync;
         if (!fieldSync) {
+            console.warn("⚠️ No field sync found");
             return null;
         }
 
         const lists = this.env.model.getters.getMainLists();
-        return lists.find(list => list.id === fieldSync.listId) || null;
+        const currentList = lists.find(list => list.id === fieldSync.listId);
+
+        if (!currentList) {
+            console.error(`❌ List ${fieldSync.listId} not found in:`, lists);
+            return null;
+        }
+
+        console.log(`✅ Current list: ${currentList.id}, model: ${currentList.model}`);
+        return currentList;
     }
 
     /**
-     *  Get current model name
+     * ✅ FIXED: Get current model name with validation
      */
     get currentModelName() {
         const list = this.getCurrentList();
-        return list ? list.model : null;
+        const modelName = list ? list.model : null;
+
+        console.log(`🔍 Current model name: ${modelName}`);
+
+        // ✅ Validate against supported models
+        const supportedModels = this.env.model.getters.getSupportedModels();
+        if (modelName && !supportedModels[modelName]) {
+            console.error(`❌ Unsupported model: ${modelName}`);
+            return null;
+        }
+
+        return modelName;
     }
 
     /**
-     *  Get display name for current model
+     * ✅ FIXED: Get display name with fallback
      */
     get modelDisplayName() {
         const models = this.env.model.getters.getSupportedModels();
         const modelName = this.currentModelName;
-        return modelName && models[modelName] 
-            ? models[modelName].displayName 
-            : 'Record';
+
+        if (!modelName) {
+            return 'Record';
+        }
+
+        const displayName = models[modelName]?.displayName || 'Record';
+        console.log(`📝 Model display name: ${displayName} (from ${modelName})`);
+
+        return displayName;
     }
 
     get fieldSyncPositionString() {
@@ -72,18 +98,32 @@ export class FieldSyncSidePanel extends Component {
     }
 
     /**
-     * Filter writable fields
+     * ✅ FIXED: Filter writable fields based on model
      */
     filterField(field) {
-        return (
+        const modelName = this.currentModelName;
+
+        // Exclude parent fields based on model
+        const excludeFields = [];
+        if (modelName === 'crm.material.line') {
+            excludeFields.push('lead_id');
+            // 🔥 exclude 'price_custom' to avoid duplicate Price fields (keep standard 'price')
+            excludeFields.push('price_custom');
+        } else if (modelName === 'sale.order.line') {
+            excludeFields.push('order_id');
+        }
+
+        const isValid = (
             !field.readonly &&
-            //  Exclude parent field based on model
-            field.name !== "order_id" &&
-            field.name !== "lead_id" &&
-            ["integer", "float", "monetary", "char", "text", "many2one", "boolean"].includes(
-                field.type
-            )
+            !excludeFields.includes(field.name) &&
+            ["integer", "float", "monetary", "char", "text", "many2one", "boolean"].includes(field.type)
         );
+
+        if (isValid) {
+            console.log(`✅ Field allowed: ${field.name} (${field.type})`);
+        }
+
+        return isValid;
     }
 
     updateRecordPosition(event) {
@@ -91,6 +131,7 @@ export class FieldSyncSidePanel extends Component {
     }
 
     updateField(fieldName) {
+        console.log(`🔄 Updating field to: ${fieldName}`);
         this.updateFieldSync({ fieldName });
     }
 

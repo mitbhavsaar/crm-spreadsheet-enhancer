@@ -5,20 +5,22 @@
     'author': "Entrivis Tech",
     'website': "https://www.entrivistech.com",
     'category': 'CRM',
-    'version': '18.0.1.0.0',
+    'version': '18.0.1.0.5',
     'depends': [
         'base',
         'crm_customisation',
         'spreadsheet',
         'spreadsheet_edition',
-        'documents_spreadsheet',
+
     ],
     'data': [
         'security/ir.model.access.csv',
+        'security/crm_spreadsheet_security.xml',
         'views/crm_lead_views.xml',
         'views/res_config_settings_view.xml',
         'views/crm_quatation_template_view.xml',
         'views/crm_quote_spreadsheet_view.xml',
+        'views/sale_views.xml',
         'views/product_category_view.xml',
 
     ],

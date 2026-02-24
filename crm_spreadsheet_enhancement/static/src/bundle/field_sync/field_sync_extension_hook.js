@@ -36,7 +36,7 @@ export function useSpreadsheetFieldSyncExtension() {
     addSpreadsheetFieldSyncExtensionWithCleanUp(onWillUnmount);
 }
 
-export function addSpreadsheetFieldSyncExtensionWithCleanUp(cleanUpHook = () => {}) {
+export function addSpreadsheetFieldSyncExtensionWithCleanUp(cleanUpHook = () => { }) {
     // Plugins
     addToRegistryWithCleanup(
         cleanUpHook,
@@ -82,7 +82,7 @@ export function addSpreadsheetFieldSyncExtensionWithCleanUp(cleanUpHook = () => 
                     row: position.row,
                     listId: targetList.id,
                     indexInList: 0,
-                    fieldName: "quantity",
+                    fieldName: targetList.model === 'sale.order.line' ? "price_unit" : "price",
                 });
             }
 

@@ -7,7 +7,17 @@
         <field name="arch" type="xml">
 
             <xpath expr="//sheet" position="inside">
-                <group string="Calculation Template">
+                <group string="Calculation Template" groups="crm_spreadsheet_enhancement.group_cost_calculator">
+                    <!-- Google Sheets Direct Sync -->
+                    <label for="google_sheet_url" string="Google Sheet Integration"/>
+                    <div class="o_row">
+                        <field name="google_sheet_url" placeholder="https://docs.google.com/spreadsheets/d/..."/>
+                        <button name="action_sync_google_sheet" type="object" string="Sync Now" 
+                                class="btn-primary" icon="fa-cloud-download"
+                                invisible="not google_sheet_url"/>
+                    </div>
+                    
+                    <separator string="OR Manual Upload"/>
                     <!-- File Upload Section -->
                     <field name="template_file" filename="template_filename"/>
                     <field name="template_filename" invisible="1"/>

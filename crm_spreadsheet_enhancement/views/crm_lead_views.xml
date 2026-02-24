@@ -12,6 +12,7 @@
                     type="object"
                     icon="fa-calculator"
                     invisible = "type != 'opportunity' or not template_id"
+                    groups="crm_spreadsheet_enhancement.group_cost_calculator"
                     >
                     <div class="o_stat_info">
                         <span class="o_stat_text">Cost Calculator</span>

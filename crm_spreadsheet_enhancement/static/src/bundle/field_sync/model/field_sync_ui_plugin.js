@@ -3,7 +3,7 @@ import { _t } from "@web/core/l10n/translation";
 import { helpers } from "@odoo/o-spreadsheet";
 import { OdooUIPlugin } from "@spreadsheet/plugins";
 
-const { positionToZone } = helpers;
+const { positionToZone, toCartesian } = helpers;
 
 export class FieldSyncUIPlugin extends OdooUIPlugin {
     static getters = ["getFieldSyncX2ManyCommands"];
@@ -37,259 +37,200 @@ export class FieldSyncUIPlugin extends OdooUIPlugin {
     }
 
     /**
-     *  Get record ID from list data properly
+     * ✅ FIXED: Get ACTUAL record ID from list domain
      */
     async getRecordIdFromList(listId, indexInList = 0) {
         try {
-            const listDataSource = this.getters.getListDataSource(listId);
-            if (!listDataSource) {
+            console.log(`🔍 [getRecordIdFromList] List: ${listId}, Index: ${indexInList}`);
+
+            const list = this.getters.getListDefinition(listId);
+            if (!list) {
+                console.error(`❌ List definition not found: ${listId}`);
                 return null;
             }
 
-            // Ensure list is ready
-            if (!listDataSource.isReady()) {
-                await listDataSource.load();
+            const domain = list.domain || [];
+            let recordId = null;
+
+            for (const condition of domain) {
+                if (!Array.isArray(condition) || condition.length < 3) {
+                    continue;
+                }
+
+                const [field, operator, value] = condition;
+
+                if (field === 'id' && operator === '=') {
+                    recordId = parseInt(value);
+                    break;
+                }
+
+                if (field === 'id' && operator === 'in' && Array.isArray(value)) {
+                    if (indexInList < value.length) {
+                        recordId = parseInt(value[indexInList]);
+                    }
+                    break;
+                }
             }
 
-            // Increase max position if needed
-            if (indexInList >= listDataSource.getMaxPosition()) {
-                listDataSource.increaseMaxPosition(indexInList + 1);
-                await listDataSource.load({ reload: true });
-            }
-
-            // Get the actual record ID at this position
-            const recordId = listDataSource.getIdFromPosition(indexInList);
-            
             if (!recordId) {
+                console.error(`❌ No record ID found in domain for list ${listId}`);
+                console.error(`Domain was:`, domain);
                 return null;
             }
 
+            console.log(`✅ [getRecordIdFromList] List ${listId} -> Record ID: ${recordId}`);
             return recordId;
+
         } catch (error) {
+            console.error(`❌ Error in getRecordIdFromList:`, error);
             return null;
         }
     }
-    // FieldSyncUIPlugin class ke andar yeh method add karein:
 
     /**
-     * Check for duplicated field syncs in a SPECIFIC list
-     * @private
-     */
-    getDuplicatedFieldSyncsForList(listId) {
-        const errors = [];
-        const map = {};
-
-        // Get all field syncs for THIS specific list only
-        const allFieldSyncs = [...this.getters.getAllFieldSyncs()];
-        
-        for (const [position, fieldSync] of allFieldSyncs) {
-            // Filter: Only check syncs for THIS list
-            if (fieldSync.listId !== listId) {
-                continue;
-            }
-
-            const { indexInList, fieldName } = fieldSync;
-            const key = `${listId}-${indexInList}-${fieldName}`;
-            const cell = this.getters.getEvaluatedCell(position);
-            
-            if (cell.type !== "empty" && cell.value !== "") {
-                map[key] ??= [];
-                map[key].push(position);
-            }
-        }
-
-        // Check for duplicates
-        for (const key in map) {
-            if (map[key].length > 1) {
-                const positions = map[key];
-                const ranges = positions
-                    .map((position) =>
-                        this.getters.getRangeFromZone(position.sheetId, positionToZone(position))
-                    )
-                    .map((range) =>
-                        this.getters.getRangeString(range, this.getters.getActiveSheetId())
-                    );
-                errors.push(
-                    _t(
-                        "Multiple cells are updating the same field of the same record! Unable to determine which one to choose: %s",
-                        ranges.join(", ")
-                    )
-                );
-            }
-        }
-
-        return errors.length ? errors : undefined;
-    }
-
-    /**
-     * Get max position for a SPECIFIC list
-     * @private
-     */
-    getFieldSyncMaxPositionForList(listId) {
-        const allFieldSyncs = [...this.getters.getAllFieldSyncs()];
-        const fieldSyncsForThisList = allFieldSyncs.filter(
-            ([position, sync]) => sync.listId === listId
-        );
-        
-        if (fieldSyncsForThisList.length === 0) {
-            return 0;
-        }
-        
-        return Math.max(...fieldSyncsForThisList.map(([position, sync]) => sync.indexInList));
-    }
-    getActiveSheetListIds() {
-        const activeSheetId = this.getters.getActiveSheetId();
-        const allLists = this.getters.getMainLists();
-        
-        return allLists
-            .filter(list => list.sheetId === activeSheetId)
-            .map(list => list.id);
-    }
-
-    /**
-     *  Check if field sync belongs to active sheet
-     */
-    isFieldSyncFromActiveSheet(fieldSync, position) {
-        const activeSheetId = this.getters.getActiveSheetId();
-        const activeSheetLists = this.getActiveSheetListIds();
-        
-        return position.sheetId === activeSheetId && 
-               activeSheetLists.includes(fieldSync.listId);
-    }
-    
-
-    /**
-     *  Correctly process field syncs by record
+     * ✅ CRITICAL FIX: Get commands for ALL sheets, not just active sheet
      */
     async getFieldSyncX2ManyCommands() {
         const commands = [];
         const errors = [];
 
         try {
-            const activeSheetId = this.getters.getActiveSheetId();
-            
-            //  GET ALL LISTS but only process those linked to ACTIVE SHEET
             const allLists = this.getters.getMainLists();
 
             if (!allLists || allLists.length === 0) {
                 return { commands: [], errors: [] };
             }
 
-            //  PROCESS ONLY LISTS THAT BELONG TO ACTIVE SHEET
-            for (const list of allLists) {
-                try {
-                    //   Only process lists that are linked to active sheet
-                    if (list.sheetId !== activeSheetId) {
-                        continue; // Skip lists from other sheets
-                    }
+            console.log(`📊 Processing ${allLists.length} lists from ALL sheets`);
 
-                    // Get data source for THIS list
-                    const listDataSource = this.getters.getListDataSource(list.id);
-                    
-                    if (!listDataSource) {
+            for (const list of allLists) {
+                // ❌ REMOVED: list.sheetId !== activeSheetId check
+                // ✅ NOW: Process ALL lists from ALL sheets
+
+                console.log(`📋 Processing list: ${list.id} (${list.name}) from sheet: ${list.sheetId}`);
+
+                const recordId = await this.getRecordIdFromList(list.id, 0);
+
+                if (!recordId) {
+                    console.error(`❌ No record ID for list ${list.id}, skipping`);
+                    errors.push(`No record found for list ${list.id}`);
+                    continue;
+                }
+
+                console.log(`✅ List ${list.id} -> Record ID: ${recordId}`);
+
+                const recordUpdates = {};
+
+                // ✅ FIXED: Correctly process the [[position, fs], ...] structure from CorePlugin
+                const allFieldSyncs = this.getters.getAllFieldSyncs();
+
+                for (const entry of allFieldSyncs) {
+                    let position, fieldSync;
+
+                    if (Array.isArray(entry) && entry.length === 2) {
+                        [position, fieldSync] = entry;
+                    } else {
+                        // Fallback for different versions/structures
                         continue;
                     }
 
-                    const fields = listDataSource.getFields();
-                    const valuesPerRecord = {};
-
-                    //  GET FIELD SYNCS ONLY FOR THIS LIST (which is already filtered by active sheet)
-                    const allFieldSyncs = this.getters.getAllFieldSyncs();
-                    let processedSyncs = 0;
-
-                    for (const [position, fieldSync] of allFieldSyncs) {
-                        //  Only process syncs for THIS list AND active sheet
-                        if (fieldSync.listId !== list.id || position.sheetId !== activeSheetId) {
-                            continue;
-                        }
-
-                        processedSyncs++;
-
-                        const { listId, indexInList, fieldName } = fieldSync;
-                        
-                        // Get the record ID
-                        const recordInfo = this.getters.getListCellValueAndFormat(
-                            listId,
-                            indexInList,
-                            "id"
-                        );
-                        const recordId = recordInfo ? recordInfo.value : null;
-
-                        // Get the cell value
-                        const cell = this.getters.getEvaluatedCell(position);
-                        
-                        if (cell.type === "empty" || cell.value === "") {
-                            continue;
-                        }
-
-                        const field = fields[fieldName];
-                        if (!field) {
-                            continue;
-                        }
-
-                        if (recordId) {
-                            const { checkType, castToServerValue } = this.getFieldTypeSpec(field.type);
-                            if (checkType(cell)) {
-                                valuesPerRecord[recordId] ??= {};
-                                valuesPerRecord[recordId][fieldName] = castToServerValue(cell);
-                            }
-                        }
+                    if (!fieldSync || fieldSync.listId !== list.id) {
+                        continue;
                     }
 
-                    // Create UPDATE commands only if we found syncs for this list
-                    if (processedSyncs > 0) {
-                        for (const recordId in valuesPerRecord) {
-                            const values = valuesPerRecord[recordId];
-                            commands.push(x2ManyCommands.update(Number(recordId), values));
-                        }
-                        
-                    }
+                    const { fieldName } = fieldSync;
+                    if (!fieldName) continue;
 
-                } catch (listError) {
-                    errors.push(_t("Error processing list %s: %s", list.id, listError.message));
+                    try {
+                        let cell;
+                        try {
+                            cell = this.getters.getEvaluatedCell(position);
+                        } catch (e) {
+                            // console.warn(`⚠️ Failed to evaluate cell at`, position);
+                            continue;
+                        }
+
+                        // ✅ EXTREME SAFETY: Ensure cell is a valid object and has 'type'
+                        if (!cell || typeof cell !== 'object') {
+                            continue;
+                        }
+
+                        // Guard against 'type' access if it doesn't exist (though it should on a valid cell object)
+                        if (!('type' in cell)) {
+                            // console.warn("⚠️ Cell object missing 'type' property:", cell);
+                            continue;
+                        }
+
+                        if (cell.type === "empty" || cell.value === "" || cell.value === null) {
+                            continue;
+                        }
+
+                        // ✅ Use formattedValue for all fields
+                        let serverValue;
+
+                        if (cell.type === "number") {
+                            serverValue = cell.value;
+                        } else if (cell.type === "boolean") {
+                            serverValue = cell.value;
+                        } else {
+                            serverValue = cell.formattedValue || cell.value || "";
+                        }
+
+                        recordUpdates[fieldName] = serverValue;
+                        console.log(`📝 Field ${fieldName} = ${serverValue} from sheet: ${position.sheetId}`);
+
+                    } catch (err) {
+                        console.error(`❌ Error processing field ${fieldName}:`, err);
+                        continue;
+                    }
+                }
+
+                if (Object.keys(recordUpdates).length > 0) {
+                    commands.push(x2ManyCommands.update(recordId, recordUpdates));
+                    console.log(`✅ Command created for record ${recordId}:`, recordUpdates);
+                } else {
+                    console.log(`⚠️ No updates for list ${list.id}`);
                 }
             }
 
+            console.log(`\n📦 Total commands from ALL sheets: ${commands.length}`);
+            console.log(`⚠️ Total errors: ${errors.length}`);
+
         } catch (error) {
-            errors.push(_t("Critical error: %s", error.message));
+            const errorMsg = `Critical error: ${error.message}`;
+            console.error(`❌ ${errorMsg}`, error);
+            errors.push(errorMsg);
         }
 
         return { commands, errors };
     }
-    /**
-     *  Get all field syncs for a specific list
-     */
+
+    getActiveSheetListIds() {
+        const activeSheetId = this.getters.getActiveSheetId();
+        const allLists = this.getters.getMainLists();
+
+        return allLists
+            .filter(list => list.sheetId === activeSheetId)
+            .map(list => list.id);
+    }
+
+    isFieldSyncFromActiveSheet(fieldSync, position) {
+        const activeSheetId = this.getters.getActiveSheetId();
+        const activeSheetLists = this.getActiveSheetListIds();
+
+        return position.sheetId === activeSheetId &&
+            activeSheetLists.includes(fieldSync.listId);
+    }
+
     getFieldSyncsForList(listId) {
         const fieldSyncs = [];
-        
+
         try {
-            // Get all field syncs from the model
             const allFieldSyncs = this.getters.getAllFieldSyncs();
-            
-            //  Correct way to iterate - depends on actual structure
-            if (allFieldSyncs instanceof Map) {
-                for (const [key, fieldSync] of allFieldSyncs) {
+            for (const entry of allFieldSyncs) {
+                if (Array.isArray(entry) && entry.length === 2) {
+                    const [position, fieldSync] = entry;
                     if (fieldSync.listId === listId) {
-                        // Reconstruct position from key or use fieldSync's position
-                        const position = this.parsePositionFromKey(key);
-                        fieldSyncs.push({
-                            ...fieldSync,
-                            ...position
-                        });
-                    }
-                }
-            } else if (Array.isArray(allFieldSyncs)) {
-                // If it's an array of objects
-                for (const fieldSync of allFieldSyncs) {
-                    if (fieldSync.listId === listId) {
-                        fieldSyncs.push(fieldSync);
-                    }
-                }
-            } else if (typeof allFieldSyncs === 'object') {
-                // If it's an object with positions as keys
-                for (const [positionKey, fieldSync] of Object.entries(allFieldSyncs)) {
-                    if (fieldSync.listId === listId) {
-                        const position = this.parsePositionFromKey(positionKey);
                         fieldSyncs.push({
                             ...fieldSync,
                             ...position
@@ -298,17 +239,14 @@ export class FieldSyncUIPlugin extends OdooUIPlugin {
                 }
             }
         } catch (error) {
+            console.error("Error getting field syncs for list:", error);
         }
-        
+
         return fieldSyncs;
     }
 
-    /**
-     *  Parse position from storage key
-     */
     parsePositionFromKey(key) {
         try {
-            // Common formats: "sheetId_col_row" or JSON stringified position
             if (key.includes('_')) {
                 const parts = key.split('_');
                 if (parts.length >= 3) {
@@ -319,46 +257,26 @@ export class FieldSyncUIPlugin extends OdooUIPlugin {
                     };
                 }
             }
-            
-            // Try JSON parsing
+
             const position = JSON.parse(key);
             if (position.sheetId && position.col !== undefined && position.row !== undefined) {
                 return position;
             }
         } catch {
-            // If parsing fails, return default
+            // Parsing failed
         }
-        
+
         return { sheetId: this.getters.getActiveSheetId(), col: 0, row: 0 };
     }
 
-    /**
-     * Get max position for a specific list
-     */
-    getFieldSyncMaxPositionForList(listId) {
-        const fieldSyncs = this.getFieldSyncsForList(listId);
-        
-        if (fieldSyncs.length === 0) {
-            return 0;
-        }
-        
-        return Math.max(...fieldSyncs.map((fieldSync) => fieldSync.indexInList || 0));
-    }
-
-    /**
-     *  IMPROVED: Check for field conflicts
-     */
     async checkFieldConflicts() {
         const errors = [];
-        const fieldUsage = {}; // { "recordId_fieldName": count }
-
         const lists = this.getters.getMainLists();
-        
+
         for (const list of lists) {
             const listFieldSyncs = this.getFieldSyncsForList(list.id);
             const syncsByIndex = {};
-            
-            // Group by indexInList
+
             for (const fieldSync of listFieldSyncs) {
                 const index = fieldSync.indexInList;
                 if (!syncsByIndex[index]) {
@@ -367,27 +285,25 @@ export class FieldSyncUIPlugin extends OdooUIPlugin {
                 syncsByIndex[index].push(fieldSync);
             }
 
-            // Check each record for conflicts
             for (const [indexInList, fieldSyncs] of Object.entries(syncsByIndex)) {
                 const recordId = await this.getRecordIdFromList(list.id, parseInt(indexInList));
                 if (!recordId) continue;
 
                 const fieldCount = {};
-                
+
                 for (const fieldSync of fieldSyncs) {
-                    const position = { 
-                        sheetId: fieldSync.sheetId, 
-                        col: fieldSync.col, 
-                        row: fieldSync.row 
+                    const position = {
+                        sheetId: fieldSync.sheetId,
+                        col: fieldSync.col,
+                        row: fieldSync.row
                     };
                     const cell = this.getters.getEvaluatedCell(position);
-                    
+
                     if (cell.type !== "empty" && cell.value !== "") {
                         fieldCount[fieldSync.fieldName] = (fieldCount[fieldSync.fieldName] || 0) + 1;
                     }
                 }
 
-                // Check for fields with multiple syncs
                 for (const [fieldName, count] of Object.entries(fieldCount)) {
                     if (count > 1) {
                         errors.push(
@@ -406,10 +322,15 @@ export class FieldSyncUIPlugin extends OdooUIPlugin {
         return errors;
     }
 
-    /**
-     * Type validation and conversion
-     */
-    getFieldTypeSpec(fieldType) {
+    getFieldTypeSpec(fieldType, fieldName) {
+        if (!fieldType) {
+            return {
+                checkType: (cell) => true,
+                error: "",
+                castToServerValue: (cell) => cell.formattedValue,
+            };
+        }
+
         switch (fieldType) {
             case "float":
             case "monetary":
@@ -438,11 +359,6 @@ export class FieldSyncUIPlugin extends OdooUIPlugin {
                 };
             case "char":
             case "text":
-                return {
-                    checkType: (cell) => true,
-                    error: "",
-                    castToServerValue: (cell) => cell.formattedValue,
-                };
             default:
                 return {
                     checkType: (cell) => true,
@@ -454,23 +370,14 @@ export class FieldSyncUIPlugin extends OdooUIPlugin {
 
     drawLayer({ ctx }, layer) {
         const activeSheetId = this.getters.getActiveSheetId();
-        
+
         try {
             const allFieldSyncs = this.getters.getAllFieldSyncs();
-            let fieldSyncEntries = [];
 
-            //  Handle different data structures
-            if (allFieldSyncs instanceof Map) {
-                fieldSyncEntries = Array.from(allFieldSyncs.entries());
-            } else if (Array.isArray(allFieldSyncs)) {
-                fieldSyncEntries = allFieldSyncs.map((sync, index) => [index, sync]);
-            } else if (typeof allFieldSyncs === 'object') {
-                fieldSyncEntries = Object.entries(allFieldSyncs);
-            }
+            for (const entry of allFieldSyncs) {
+                if (!Array.isArray(entry) || entry.length !== 2) continue;
+                const [position, fieldSync] = entry;
 
-            for (const [key, fieldSync] of fieldSyncEntries) {
-                const position = this.parsePositionFromKey(key);
-                
                 if (position.sheetId !== activeSheetId) {
                     continue;
                 }
@@ -488,7 +395,41 @@ export class FieldSyncUIPlugin extends OdooUIPlugin {
                 ctx.lineTo(x + width, y + 5);
                 ctx.fill();
             }
-        } catch {
+        } catch (error) {
+            console.error("Error drawing field sync layer:", error);
+        }
+    }
+
+    /**
+     * ✅ EXTREME FIX: Capture evaluated values during export in the UI context.
+     * Since getEvaluatedCell is a UI-only getter, we must do this here.
+     */
+    export(data) {
+        console.log("📤 [UIPlugin] Exporting data with evaluated values for formula sync...");
+        for (const sheet of data.sheets || []) {
+            if (!sheet.fieldSyncs) {
+                continue;
+            }
+            for (const [xc, fieldSync] of Object.entries(sheet.fieldSyncs)) {
+                try {
+                    const { col, row } = toCartesian(xc);
+                    const position = { sheetId: sheet.id, col, row };
+
+                    // In UI context, getEvaluatedCell is guaranteed to exist
+                    const cell = this.getters.getEvaluatedCell(position);
+
+                    // Enrich the metadata with the actual current value
+                    fieldSync.value = cell ? cell.value : null;
+
+                    // debug logging for formulas
+                    const rawCell = this.getters.getCell(sheet.id, col, row);
+                    if (rawCell && rawCell.content && rawCell.content.startsWith('=')) {
+                        console.log(`🧪 [UI-SYNC] Formula Result for ${xc}: ${fieldSync.value}`);
+                    }
+                } catch (e) {
+                    console.error(`❌ [UI-SYNC] Failed to capture value for ${xc}:`, e);
+                }
+            }
         }
     }
 }

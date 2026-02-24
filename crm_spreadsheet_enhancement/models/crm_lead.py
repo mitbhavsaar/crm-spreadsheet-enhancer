@@ -63,29 +63,26 @@ class CrmLead(models.Model):
     def action_open_lead_spreadsheet(self):
         """Open the quote calculator spreadsheet."""
         self.ensure_one()
-
+        
         # 1️⃣ Product category from first material line
         category_id = False
         if self.material_line_ids:
             category_id = self.material_line_ids[0].product_category_id.id
             print("DEBUG: Auto category from line =", category_id)
 
-        # 2️⃣ Existing spreadsheet?
+        # Reuse existing spreadsheet or create new
         spreadsheet = self.env['crm.lead.spreadsheet'].search([
             ('lead_id', '=', self.id)
         ], limit=1)
 
-        # 3️⃣ Create new with category
         if not spreadsheet:
             spreadsheet = self.env['crm.lead.spreadsheet'].create({
                 'name': f"{self.name or 'Quote'} - Calculator",
                 'lead_id': self.id,
-                'product_category_id': category_id,   # 🔥 CRITICAL FIX
+                # 'product_category_id': category_id,
             })
-            print("DEBUG: Spreadsheet created with category =", category_id)
 
         return spreadsheet.action_open_spreadsheet()
-
     
     def unlink(self):
         """Delete all related spreadsheets when lead is deleted."""

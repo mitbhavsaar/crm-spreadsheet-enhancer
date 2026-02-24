@@ -7,18 +7,20 @@
             <field name="inherit_id" ref="crm.res_config_settings_view_form"/>
             <field name="arch" type="xml">
 
-                <!-- Insert inside existing CRM block -->
-                <xpath expr="//app[@name='crm']/block[1]" position="inside">
-                    <setting id="crm_quotation_template_setting" string="CRM Quotation Template" help="Enable default CRM quotation templates for opportunities.">
-                        <field name="enable_crm_quotation_templates"/>
-                        <lable invisible = "enable_crm_quotation_templates !=  True" class="me-4">Default Template</lable>
-                        <field name="crm_quotation_template_id" invisible = "enable_crm_quotation_templates !=  True"  class="oe_inline"/>
-                        <div invisible = "enable_crm_quotation_templates !=  True" >
-                            <a type="action" name="crm_spreadsheet_enhancement.crm_quotation_template_action" class="oe_link">
-                                CRM Quotation Templates
-                            </a>
-                        </div>
-                    </setting>
+                <!-- Isolated block for CRM Quotation Templates -->
+                <xpath expr="//app[@name='crm']/block[1]" position="after">
+                    <block title="Quotation Management" id="crm_quotation_management_block">
+                        <setting id="crm_quotation_template_setting" string="CRM Quotation Template" help="Enable default CRM quotation templates for opportunities.">
+                            <field name="enable_crm_quotation_templates"/>
+                            <label for="crm_quotation_template_id" invisible="enable_crm_quotation_templates != True" class="me-4">Default Template</label>
+                            <field name="crm_quotation_template_id" invisible="enable_crm_quotation_templates != True" class="oe_inline"/>
+                            <div invisible="enable_crm_quotation_templates != True">
+                                <a type="action" name="crm_spreadsheet_enhancement.crm_quotation_template_action" class="oe_link">
+                                    CRM Quotation Templates
+                                </a>
+                            </div>
+                        </setting>
+                    </block>
                 </xpath>
 
             </field>

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_order_form_inherit_spreadsheet_enhancement" model="ir.ui.view">
+        <field name="name">sale.order.form.spreadsheet.enhancement</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="crm_customisation.view_order_form_inherit_ecpl"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='payment_term_id']" position="after">
+                <field name="spreadsheet_id" invisible="1"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

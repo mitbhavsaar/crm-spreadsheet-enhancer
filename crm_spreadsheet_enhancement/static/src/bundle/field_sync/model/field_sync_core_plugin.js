@@ -3,15 +3,17 @@ import { OdooCorePlugin } from "@spreadsheet/plugins";
 
 const { positionToZone, toCartesian, toXC } = helpers;
 
-// MODEL CONFIGURATION - Both CRM and Sales supported
+// ✅ UPDATED: Dynamic models ke liye base fields only
 const SUPPORTED_MODELS = {
     'crm.material.line': {
-        fields: ['product_template_id','attributes_description','quantity', 'width', 'height', 'length', 'thickness'],
-        displayName: 'Material Line'
+        fields: ['product_template_id', 'quantity'], // Base fields only
+        displayName: 'Material Line',
+        dynamic: true  // ✅ Indicates this model has dynamic attributes
     },
     'sale.order.line': {
-        fields: ['product_id', 'product_uom_qty', 'price_unit', 'width', 'height', 'length', 'thickness'],
-        displayName: 'Order Line'
+        fields: ['product_id', 'product_uom_qty', 'price_unit', 'width', 'height', 'length', 'thickness', 'raw_material', 'raisin_type_id', 'description'],
+        displayName: 'Order Line',
+        dynamic: true
     }
 };
 
@@ -23,6 +25,8 @@ export class FieldSyncCorePlugin extends OdooCorePlugin {
         "getMainLists",
         "getSupportedModels",
         "getCurrentSpreadsheetModel",
+        "getDynamicFieldsForList",
+        "getModelFields", // ✅ NEW: Get all fields including dynamic ones
     ];
 
     fieldSyncs = {};
@@ -132,23 +136,51 @@ export class FieldSyncCorePlugin extends OdooCorePlugin {
         }
 
         const listIds = this.getters.getListIds() || [];
-        
+
         for (const listId of listIds) {
             const list = this.getters.getListDefinition(listId);
             if (!list) continue;
-            
+
             const modelName = list.model || list.modelName;
-            
+
             if (this._isSupportedModel(modelName)) {
                 return modelName;
             }
         }
-        
+
         return null;
     }
 
     /**
-     * GENERIC: Get all lists for supported models
+     * ✅ NEW: Get ALL fields for a model (base + dynamic)
+     */
+    getModelFields(listId) {
+        const list = this.getters.getListDefinition(listId);
+        if (!list) return [];
+
+        const modelName = list.model || list.modelName;
+        const modelConfig = SUPPORTED_MODELS[modelName];
+
+        if (!modelConfig) return [];
+
+        // For dynamic models, use columns from list definition
+        if (modelConfig.dynamic && Array.isArray(list.columns)) {
+            return list.columns; // ✅ Returns: ['product_template_id', 'quantity', 'Color', 'Width', etc.]
+        }
+
+        // For static models, use predefined fields
+        return modelConfig.fields;
+    }
+
+    /**
+     * ✅ UPDATED: Get dynamic fields for a specific list
+     */
+    getDynamicFieldsForList(listId) {
+        return this.getModelFields(listId);
+    }
+
+    /**
+     * ✅ UPDATED: Enhanced getMainLists with full column support
      */
     getMainLists() {
         if (!this.getters || typeof this.getters.getListIds !== "function") {
@@ -166,26 +198,17 @@ export class FieldSyncCorePlugin extends OdooCorePlugin {
 
             const modelName = list.model || list.modelName;
 
-            // Is this a supported model?
             if (!this._isSupportedModel(modelName)) {
                 continue;
             }
 
-            // Get columns
-            let columns = [];
-            if (Array.isArray(list.columns)) {
-                columns = list.columns;
-            } else if (list.columns && typeof list.columns === "object") {
-                columns = Object.keys(list.columns);
-            } else {
-                // Fallback: Use model's default fields
-                columns = SUPPORTED_MODELS[modelName]?.fields || [];
-            }
+            // ✅ Get ALL columns including dynamic ones
+            const columns = this.getModelFields(listId);
 
             const processedList = {
                 id: list.id,
                 model: modelName,
-                columns,
+                columns,  // ✅ Full list of columns
                 field_names: columns,
                 name: list.name || `${SUPPORTED_MODELS[modelName].displayName} ${list.id}`,
                 sheetId: list.sheetId || `sheet_${list.id}`,
@@ -201,10 +224,12 @@ export class FieldSyncCorePlugin extends OdooCorePlugin {
     }
 
     /**
-     * Return array consistently
+     * ✅ ENHANCED: Get ALL field syncs with better debugging
      */
     getAllFieldSyncs() {
         const result = [];
+        let totalFound = 0;
+
         for (const sheetId in this.fieldSyncs) {
             const cols = this.fieldSyncs[sheetId] || {};
             for (const colKey in cols) {
@@ -216,10 +241,13 @@ export class FieldSyncCorePlugin extends OdooCorePlugin {
                     const fs = this.getFieldSync(position);
                     if (fs) {
                         result.push([position, fs]);
+                        totalFound++;
                     }
                 }
             }
         }
+
+        console.log(`🔍 Found ${totalFound} field syncs across ${Object.keys(this.fieldSyncs).length} sheets`);
         return result;
     }
 
@@ -245,9 +273,6 @@ export class FieldSyncCorePlugin extends OdooCorePlugin {
         return this.getters.getRangeFromZone(position.sheetId, positionToZone(position));
     }
 
-    /**
-     * Export with proper fieldSyncs
-     */
     export(data) {
         const all = this.getAllFieldSyncs();
         if (!all.length) {
@@ -274,17 +299,14 @@ export class FieldSyncCorePlugin extends OdooCorePlugin {
         }
     }
 
-    /**
-     * Import with proper handling
-     */
     import(data) {
         let totalImported = 0;
-        
+
         for (const sheet of data.sheets || []) {
             if (!sheet.fieldSyncs) {
                 continue;
             }
-            
+
             let sheetImported = 0;
             for (const [xc, fieldSync] of Object.entries(sheet.fieldSyncs)) {
                 const { col, row } = toCartesian(xc);

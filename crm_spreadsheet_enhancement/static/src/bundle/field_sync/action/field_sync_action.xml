@@ -5,7 +5,7 @@
             <t t-set-slot="navbar-additional-actions">
                 <!-- 🔥 GENERIC: Works for both CRM and Sales -->
                 <button
-                    t-if="data.lead_id or data.sale_order_id"
+                    t-if="leadId or saleOrderId"
                     class="btn btn-primary mx-1 py-0 px-1"
                     t-on-click="writeToParent"
                     data-hotkey="s"

@@ -68,5 +68,5 @@
               name="CRM Quotation Templates"
               parent="crm.crm_menu_config"
               action="action_crm_quotation_template"
-              sequence="25"/>
+              sequence="50"/>
 </odoo>

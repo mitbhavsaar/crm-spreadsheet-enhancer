@@ -41,7 +41,7 @@ export class FieldSyncHighlightStore extends SpreadsheetStore {
                 }
                 const [listIdArg, positionArg, fieldNameArg] = listFunction.args;
                 if (!listIdArg || !positionArg || !fieldNameArg) {
-                    continue;
+                   continue;
                 }
                 const listId = this.getters
                     .evaluateFormula(sheetId, astToFormula(listIdArg))
